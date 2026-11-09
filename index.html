@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101827">
+<meta name="description" content="Personal fitness measurements and strength tracking.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Progress Ledger</title>
+<style>
+:root{--bg:#f4f6f8;--panel:#fff;--ink:#172033;--muted:#697586;--line:#e5e9ef;--accent:#315efb;--accent-soft:#edf1ff;--good:#16845b;--bad:#c44b4b;--shadow:0 8px 28px rgba(20,35,60,.06)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+header{background:#101827;color:white;padding:22px max(20px,calc((100% - 1180px)/2));display:flex;align-items:center;justify-content:space-between;gap:16px}
+.brand{font-weight:750;font-size:20px;letter-spacing:-.4px}.brand span{color:#8fa7ff}.subbrand{font-size:12px;color:#aab5c5;margin-top:2px}
+main{max-width:1180px;margin:24px auto;padding:0 20px 50px}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+nav button,.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:9px 13px;border-radius:10px;font-weight:600;cursor:pointer}
+nav button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+button:hover{filter:brightness(.98)}button:disabled{opacity:.5;cursor:not-allowed}
+.page{display:none}.page.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.card,.panel{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:17px;box-shadow:var(--shadow)}
+.metric-label{font-size:12px;color:var(--muted);font-weight:650}.metric-value{font-size:27px;font-weight:750;letter-spacing:-.8px;margin:7px 0 2px}.metric-change{font-size:12px;color:var(--muted)}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:25px 0 12px}.section-head h2{font-size:17px;margin:0}.section-head p{margin:3px 0 0;color:var(--muted);font-size:12px}
+.two-col{display:grid;grid-template-columns:1.2fr .8fr;gap:14px}.panel h3{font-size:15px;margin:0 0 12px}.muted{color:var(--muted)}.small{font-size:12px}
+.chart-wrap{height:220px;position:relative}.chart-wrap svg{width:100%;height:100%;overflow:visible}.chart-empty{height:100%;display:grid;place-items:center;color:var(--muted);font-size:13px}
+form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}label{display:block;font-size:12px;font-weight:650;color:#4e5a6b}input,select,textarea{display:block;width:100%;margin-top:5px;border:1px solid #d8dee8;border-radius:9px;padding:10px 11px;background:#fff;color:var(--ink);font:inherit;min-width:0}textarea{min-height:40px;resize:vertical}
+.form-actions{grid-column:1/-1;display:flex;gap:8px;align-items:center}.primary{background:var(--accent);border-color:var(--accent);color:#fff}.danger{color:var(--bad)}.full{grid-column:1/-1}
+.table-wrap{overflow:auto;margin-top:12px}table{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap}th,td{text-align:left;padding:10px 9px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}td.actions{white-space:nowrap}td button{border:0;background:none;color:var(--accent);cursor:pointer;font-weight:650;padding:3px 5px}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.toolbar select{width:auto;margin:0}.empty{padding:25px;text-align:center;color:var(--muted);font-size:13px}
+.pill{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:99px;padding:4px 8px;font-size:11px;font-weight:700}
+.note{background:#f8f9fb;border:1px solid var(--line);padding:12px;border-radius:10px;color:var(--muted);font-size:12px}
+.review-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:850px){.grid{grid-template-columns:repeat(2,1fr)}.two-col{grid-template-columns:1fr}.review-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){header{padding:17px 18px}main{padding:0 13px 35px;margin-top:16px}.grid{gap:9px}.card{padding:13px}.metric-value{font-size:22px}form{grid-template-columns:repeat(2,minmax(0,1fr))}.review-grid{grid-template-columns:1fr 1fr}.section-head{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<header><div><div class="brand">Progress <span>Ledger</span></div><div class="subbrand">Personal fitness measurements, without the guesswork.</div></div><div class="pill">Stored on this device</div></header>
+<main>
+<nav id="nav">
+<button class="active" data-page="dashboard">Overview</button><button data-page="weight">Weight</button><button data-page="measurements">Body measurements</button><button data-page="workouts">Strength log</button><button data-page="review">Monthly review</button><button data-page="data">Data</button>
+</nav>
+<section id="dashboard" class="page active">
+<div class="grid" id="overviewCards"></div>
+<div class="section-head"><div><h2>Trends</h2><p>Recorded values only. No estimated body-fat or muscle scores.</p></div></div>
+<div class="two-col">
+<div class="panel"><h3>Body weight</h3><div class="toolbar"><select id="weightRange"><option value="30">Last 30 days</option><option value="90" selected>Last 3 months</option><option value="180">Last 6 months</option><option value="all">All time</option></select></div><div class="chart-wrap" id="weightChart"></div></div>
+<div class="panel"><h3>Waist circumference</h3><div class="chart-wrap" id="waistChart"></div></div>
+</div>
+<div class="section-head"><div><h2>Latest body measurements</h2><p>Compared with the previous recorded measurement.</p></div></div>
+<div class="panel" id="latestMeasurements"></div>
+<div class="section-head"><div><h2>Recent strength records</h2><p>Best set by exercise, based on logged sessions.</p></div></div>
+<div class="panel" id="recentStrength"></div>
+</section>
+
+<section id="weight" class="page">
+<div class="section-head"><div><h2>Weight log</h2><p>Record morning weight. Use weekly averages to assess the trend.</p></div></div>
+<div class="panel"><form id="weightForm">
+<label>Date<input type="date" name="date" required></label><label>Weight (kg)<input type="number" name="weight" min="1" max="500" step=".01" required placeholder="e.g. 68.8"></label><label>Notes<input name="notes" placeholder="Optional"></label>
+<div class="form-actions"><button class="btn primary" type="submit">Save weight</button><button class="btn" type="button" id="cancelWeight" hidden>Cancel edit</button></div>
+</form></div>
+<div class="section-head"><h2>History</h2></div><div class="panel table-wrap" id="weightTable"></div>
+</section>
+
+<section id="measurements" class="page">
+<div class="section-head"><div><h2>Body measurements</h2><p>Record every two weeks, using the same landmarks and technique.</p></div></div>
+<div class="panel"><form id="measureForm">
+<label>Date<input type="date" name="date" required></label>
+<label>Waist (cm)<input type="number" name="waist" min="1" max="300" step=".1" placeholder="Optional"></label>
+<label>Chest (cm)<input type="number" name="chest" min="1" max="300" step=".1" placeholder="Optional"></label>
+<label>Shoulders (cm)<input type="number" name="shoulders" min="1" max="300" step=".1" placeholder="Optional"></label>
+<label>Left arm (cm)<input type="number" name="leftArm" min="1" max="150" step=".1" placeholder="Optional"></label>
+<label>Right arm (cm)<input type="number" name="rightArm" min="1" max="150" step=".1" placeholder="Optional"></label>
+<label>Left thigh (cm)<input type="number" name="leftThigh" min="1" max="150" step=".1" placeholder="Optional"></label>
+<label>Right thigh (cm)<input type="number" name="rightThigh" min="1" max="150" step=".1" placeholder="Optional"></label>
+<label>Left calf (cm)<input type="number" name="leftCalf" min="1" max="100" step=".1" placeholder="Optional"></label>
+<label>Right calf (cm)<input type="number" name="rightCalf" min="1" max="100" step=".1" placeholder="Optional"></label>
+<label class="full">Notes<input name="notes" placeholder="Optional"></label>
+<div class="form-actions"><button class="btn primary" type="submit">Save measurements</button><button class="btn" type="button" id="cancelMeasure" hidden>Cancel edit</button></div>
+</form><p class="small muted">You can save a partial record. Blank fields remain blank, not zero.</p></div>
+<div class="section-head"><h2>Measurement history</h2></div><div class="panel table-wrap" id="measureTable"></div>
+</section>
+
+<section id="workouts" class="page">
+<div class="section-head"><div><h2>Strength log</h2><p>Log each set. Compare an exercise only against its own history.</p></div></div>
+<div class="panel"><form id="workoutForm">
+<label>Date<input type="date" name="date" required></label><label>Exercise<input name="exercise" list="exerciseOptions" required placeholder="e.g. Bench press"><datalist id="exerciseOptions"><option>Bench press</option><option>Squat</option><option>Lat pulldown</option><option>Seated row</option><option>Shoulder press</option><option>Bicep curl</option><option>Tricep pushdown</option><option>Leg press</option><option>Romanian deadlift</option><option>Chest press</option><option>Leg curl</option><option>Leg extension</option></datalist></label>
+<label>Weight (kg)<input type="number" name="weight" min="0" step=".25" required></label><label>Sets<input type="number" name="sets" min="1" max="30" step="1" required value="3"></label><label>Reps per set<input name="reps" required placeholder="e.g. 10, 9, 8"></label><label>Notes<input name="notes" placeholder="Optional"></label>
+<div class="form-actions"><button class="btn primary" type="submit">Log workout</button><button class="btn" type="button" id="cancelWorkout" hidden>Cancel edit</button></div>
+</form></div>
+<div class="section-head"><div><h2>Exercise progression</h2><p>Choose an exercise to inspect its history.</p></div><select id="exerciseFilter"><option value="">All exercises</option></select></div>
+<div class="panel" id="exerciseSummary"></div><div class="panel table-wrap" id="workoutTable" style="margin-top:14px"></div>
+</section>
+
+<section id="review" class="page">
+<div class="section-head"><div><h2>Monthly review</h2><p>Compare the latest calendar month with the preceding calendar month.</p></div><select id="reviewMonth"></select></div>
+<div class="grid" id="reviewCards"></div>
+<div class="section-head"><h2>Measurement comparison</h2></div><div class="panel table-wrap" id="reviewTable"></div>
+<div class="section-head"><h2>Strength highlights</h2></div><div class="panel" id="reviewStrength"></div>
+</section>
+
+<section id="data" class="page">
+<div class="section-head"><div><h2>Data & backup</h2><p>Your records stay in this browser on this device.</p></div></div>
+<div class="panel"><h3>Export your data</h3><p class="muted small">Download a complete JSON backup or separate CSV files for your records.</p><div class="toolbar"><button class="btn primary" id="exportJson">Export JSON backup</button><button class="btn" id="exportWeight">Weight CSV</button><button class="btn" id="exportMeasures">Measurements CSV</button><button class="btn" id="exportWorkouts">Workouts CSV</button></div></div>
+<div class="panel" style="margin-top:14px"><h3>Restore from backup</h3><p class="muted small">Import a JSON backup previously exported from this app. This replaces the current records.</p><input type="file" id="importFile" accept=".json,application/json"><button class="btn" id="importJson" style="margin-top:10px">Import backup</button></div>
+<div class="panel" style="margin-top:14px"><h3>Clear all data</h3><p class="muted small">Permanently delete all records stored by this app in this browser.</p><button class="btn danger" id="clearData">Delete all records</button></div>
+<div class="note" style="margin-top:14px">Important: localStorage is tied to this browser and device. Clearing browser data, using private browsing, or switching devices may remove or hide your records. Export backups periodically.</div>
+</section>
+</main>
+<script>
+const KEY='progressLedger_v1';
+const empty=()=>({weights:[],measurements:[],workouts:[]});
+let db=load(),editWeight=null,editMeasure=null,editWorkout=null;
+function load(){try{return {...empty(),...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch(e){return empty()}}
+function save(){localStorage.setItem(KEY,JSON.stringify(db));renderAll()}
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const today=()=>new Date().toISOString().slice(0,10);
+function setDefaultDates(){['#weightForm','#measureForm','#workoutForm'].forEach(s=>$(s).elements.date.value=today())}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function fmt(n,d=1){return n==null||n===''?'—':Number(n).toFixed(d)}
+function sorted(a){return [...a].sort((x,y)=>x.date.localeCompare(y.date))}
+function delta(a,b){return a==null||b==null?'—':`${(a-b)>0?'+':''}${(a-b).toFixed(1)}`}
+function latest(a){return sorted(a).at(-1)}
+function avg(a){return a.length?a.reduce((s,x)=>s+x,0)/a.length:null}
+function rollingWeights(){return sorted(db.weights).map((x,i,arr)=>{const start=new Date(x.date+'T00:00:00');start.setDate(start.getDate()-6);const vals=arr.filter(y=>y.date>=start.toISOString().slice(0,10)&&y.date<=x.date).map(y=>+y.weight);return {...x,average:avg(vals)}})}
+function card(label,value,unit,change){return `<div class="card"><div class="metric-label">${label}</div><div class="metric-value">${value??'—'} <span class="small muted">${unit||''}</span></div><div class="metric-change">${change||'No comparison yet'}</div></div>`}
+function renderOverview(){
+ const w=latest(db.weights),ws=sorted(db.weights),prevW=ws.length>1?ws.at(-2):null,roll=rollingWeights(),m=latest(db.measurements),ms=sorted(db.measurements),pm=ms.length>1?ms.at(-2):null;
+ const avg7=roll.at(-1)?.average;
+ $('#overviewCards').innerHTML=[
+ card('Latest weight',w?fmt(w.weight,2):'—','kg',w&&prevW?`Previous entry: ${delta(+w.weight,+prevW.weight)} kg`:'Record weight to begin'),
+ card('7-day average',avg7?fmt(avg7,2):'—','kg','Based on available entries in the last 7 days'),
+ card('Waist',m?.waist?fmt(m.waist):'—','cm',m&&pm?.waist?`Since previous: ${delta(+m.waist,+pm.waist)} cm`:'No comparison yet'),
+ card('Latest measurement',m?.date||'—','','Most recent body measurement record')
+ ].join('');
+ drawChart('#weightChart',rollingWeights().map(x=>({date:x.date,value:x.average})), 'kg', $('#weightRange').value);
+ drawChart('#waistChart',sorted(db.measurements).filter(x=>x.waist).map(x=>({date:x.date,value:+x.waist})), 'cm','all');
+ const fields=[['Chest','chest'],['Shoulders','shoulders'],['Left arm','leftArm'],['Right arm','rightArm'],['Left thigh','leftThigh'],['Right thigh','rightThigh'],['Left calf','leftCalf'],['Right calf','rightCalf']];
+ $('#latestMeasurements').innerHTML=m?`<div class="table-wrap"><table><thead><tr><th>Measurement</th><th>Latest</th><th>Change</th></tr></thead><tbody>${[['Waist','waist'],...fields].map(([n,k])=>`<tr><td>${n}</td><td>${m[k]!=null?fmt(m[k])+' cm':'—'}</td><td>${m[k]!=null&&pm?.[k]!=null?delta(+m[k],+pm[k])+' cm':'—'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No body measurements recorded yet.</div>';
+ const ex=[...new Set(db.workouts.map(x=>x.exercise))];$('#recentStrength').innerHTML=ex.length?`<div class="table-wrap"><table><thead><tr><th>Exercise</th><th>Latest session</th><th>Best weight</th></tr></thead><tbody>${ex.map(e=>{const a=sorted(db.workouts.filter(x=>x.exercise===e));return `<tr><td>${esc(e)}</td><td>${a.at(-1).date}</td><td>${fmt(Math.max(...a.map(x=>+x.weight)),2)} kg</td></tr>`}).join('')}</tbody></table></div>`:'<div class="empty">No workouts logged yet.</div>';
+}
+function drawChart(sel,points,unit,range){
+ const el=$(sel);let data=points;
+ if(range!=='all'&&data.length){const cutoff=new Date();cutoff.setDate(cutoff.getDate()-Number(range));const s=cutoff.toISOString().slice(0,10);data=data.filter(x=>x.date>=s)}
+ if(!data.length){el.innerHTML='<div class="chart-empty">Not enough recorded data yet.</div>';return}
+ const W=600,H=210,L=48,R=15,T=15,B=34,vals=data.map(x=>x.value),min=Math.min(...vals),max=Math.max(...vals),pad=(max-min)||1,lo=min-pad*.15,hi=max+pad*.15;
+ const X=i=>L+(data.length===1?0:i*(W-L-R)/(data.length-1)),Y=v=>T+(hi-v)*(H-T-B)/(hi-lo);
+ let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Trend chart">`;
+ for(let i=0;i<4;i++){const y=T+i*(H-T-B)/3,v=hi-i*(hi-lo)/3;svg+=`<line x1="${L}" y1="${y}" x2="${W-R}" y2="${y}" stroke="#e8edf3"/><text x="${L-8}" y="${y+4}" text-anchor="end" font-size="10" fill="#7b8796">${v.toFixed(1)}</text>`}
+ const path=data.map((p,i)=>(i?'L':'M')+X(i)+','+Y(p.value)).join(' ');
+ svg+=`<path d="${path}" fill="none" stroke="#315efb" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>`;
+ data.forEach((p,i)=>svg+=`<circle cx="${X(i)}" cy="${Y(p.value)}" r="3.5" fill="#315efb"><title>${p.date}: ${p.value.toFixed(2)} ${unit}</title></circle>`);
+ [0,Math.floor((data.length-1)/2),data.length-1].filter((v,i,a)=>a.indexOf(v)===i).forEach(i=>svg+=`<text x="${X(i)}" y="${H-8}" text-anchor="${i===0?'start':i===data.length-1?'end':'middle'}" font-size="10" fill="#7b8796">${data[i].date.slice(5)}</text>`);
+ svg+='</svg>';el.innerHTML=svg;
+}
+function table(rows,headers){if(!rows.length)return '<div class="empty">No records yet.</div>';return `<table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`}
+function actions(type,id){return `<td class="actions"><button data-edit="${type}:${id}">Edit</button><button class="danger" data-delete="${type}:${id}">Delete</button></td>`}
+function renderWeight(){const a=sorted(db.weights).reverse();$('#weightTable').innerHTML=table(a.map(x=>`<tr><td>${x.date}</td><td>${fmt(x.weight,2)} kg</td><td>${esc(x.notes)}</td>${actions('weight',x.id)}</tr>`),['Date','Weight','Notes','Actions'])}
+const mf=[['waist','Waist'],['chest','Chest'],['shoulders','Shoulders'],['leftArm','Left arm'],['rightArm','Right arm'],['leftThigh','Left thigh'],['rightThigh','Right thigh'],['leftCalf','Left calf'],['rightCalf','Right calf']];
+function renderMeasures(){const a=sorted(db.measurements).reverse();$('#measureTable').innerHTML=table(a.map(x=>`<tr><td>${x.date}</td>${mf.map(([k])=>`<td>${x[k]!=null?fmt(x[k])+' cm':'—'}</td>`).join('')}<td>${esc(x.notes)}</td>${actions('measure',x.id)}</tr>`),['Date',...mf.map(x=>x[1]),'Notes','Actions'])}
+function renderWorkouts(){const names=[...new Set(db.workouts.map(x=>x.exercise))].sort();const filter=$('#exerciseFilter').value;$('#exerciseFilter').innerHTML='<option value="">All exercises</option>'+names.map(n=>`<option ${n===filter?'selected':''}>${esc(n)}</option>`).join('');const a=sorted(db.workouts.filter(x=>!filter||x.exercise===filter)).reverse();$('#workoutTable').innerHTML=table(a.map(x=>`<tr><td>${x.date}</td><td>${esc(x.exercise)}</td><td>${fmt(x.weight,2)} kg</td><td>${x.sets}</td><td>${esc(x.reps)}</td><td>${esc(x.notes)}</td>${actions('workout',x.id)}</tr>`),['Date','Exercise','Weight','Sets','Reps per set','Notes','Actions']);
+ const best=filter?db.workouts.filter(x=>x.exercise===filter):[];$('#exerciseSummary').innerHTML=filter?(best.length?`<span class="pill">${esc(filter)}</span><div class="review-grid" style="margin-top:12px">${card('Best logged weight',fmt(Math.max(...best.map(x=>+x.weight)),2),'kg')}${card('Sessions logged',best.length,'')}${card('Latest session',latest(best).date,'')}</div>`:'No records for this exercise.'):'Select an exercise to see its progression summary.'}
+function monthKey(d){return d.slice(0,7)}
+function renderReview(){const months=[...new Set([...db.weights,...db.measurements,...db.workouts].map(x=>monthKey(x.date)))].sort().reverse();const sel=$('#reviewMonth'),old=sel.value;sel.innerHTML=months.map(m=>`<option value="${m}">${m}</option>`).join('');if(months.includes(old))sel.value=old;const chosen=sel.value;if(!chosen){$('#reviewCards').innerHTML='<div class="empty">Add records to generate a monthly review.</div>';$('#reviewTable').innerHTML='';$('#reviewStrength').innerHTML='';return}
+ const prev=new Date(chosen+'-01T00:00:00');prev.setMonth(prev.getMonth()-1);const prevKey=monthKey(prev.toISOString().slice(0,10));
+ const monthLast=(arr,key)=>latest(arr.filter(x=>monthKey(x.date)===key));
+ const w1=monthLast(db.weights,prevKey),w2=monthLast(db.weights,chosen),m1=monthLast(db.measurements,prevKey),m2=monthLast(db.measurements,chosen);
+ $('#reviewCards').innerHTML=[card('Weight change',w1&&w2?delta(+w2.weight,+w1.weight):'—','kg','Last recorded entry in each month'),card('Waist change',m1?.waist!=null&&m2?.waist!=null?delta(+m2.waist,+m1.waist):'—','cm','Last recorded entry in each month'),card('Workouts logged',db.workouts.filter(x=>monthKey(x.date)===chosen).length,'sessions','Selected calendar month')].join('');
+ $('#reviewTable').innerHTML=table(mf.map(([k,n])=>`<tr><td>${n}</td><td>${m1?.[k]!=null?fmt(m1[k])+' cm':'—'}</td><td>${m2?.[k]!=null?fmt(m2[k])+' cm':'—'}</td><td>${m1?.[k]!=null&&m2?.[k]!=null?delta(+m2[k],+m1[k])+' cm':'—'}</td></tr>`),['Measurement','Previous month','Selected month','Change']);
+ const current=db.workouts.filter(x=>monthKey(x.date)===chosen);$('#reviewStrength').innerHTML=current.length?table([...new Set(current.map(x=>x.exercise))].map(e=>{const a=current.filter(x=>x.exercise===e);return `<tr><td>${esc(e)}</td><td>${Math.max(...a.map(x=>+x.weight)).toFixed(2)} kg</td><td>${a.length}</td></tr>`}),['Exercise','Best weight that month','Sessions']):'<div class="empty">No workouts logged in this month.</div>';
+}
+function renderAll(){renderOverview();renderWeight();renderMeasures();renderWorkouts();renderReview()}
+function resetForm(form,editBtn){form.reset();form.elements.date.value=today();if(editBtn)editBtn.hidden=true}
+function formData(form,keys){const o=Object.fromEntries(new FormData(form));keys.forEach(k=>{if(o[k]==='')delete o[k];else if(k!=='date'&&k!=='notes'&&k!=='exercise'&&k!=='reps')o[k]=Number(o[k])});return o}
+$('#weightForm').addEventListener('submit',e=>{e.preventDefault();const d=formData(e.target,['weight','notes']);if(editWeight){db.weights=db.weights.map(x=>x.id===editWeight?{...x,...d}:x);editWeight=null}else db.weights.push({id:crypto.randomUUID(),...d});resetForm(e.target,$('#cancelWeight'));save()});
+$('#measureForm').addEventListener('submit',e=>{e.preventDefault();const d=formData(e.target,mf.map(x=>x[0]).concat('notes'));if(!mf.some(([k])=>d[k]!=null)){alert('Enter at least one body measurement.');return}if(editMeasure){db.measurements=db.measurements.map(x=>x.id===editMeasure?{...x,...d}:x);editMeasure=null}else db.measurements.push({id:crypto.randomUUID(),...d});resetForm(e.target,$('#cancelMeasure'));save()});
+$('#workoutForm').addEventListener('submit',e=>{e.preventDefault();const d=formData(e.target,['weight','sets','exercise','reps','notes']);if(editWorkout){db.workouts=db.workouts.map(x=>x.id===editWorkout?{...x,...d}:x);editWorkout=null}else db.workouts.push({id:crypto.randomUUID(),...d});resetForm(e.target,$('#cancelWorkout'));save()});
+[['#cancelWeight','#weightForm','weight'],['#cancelMeasure','#measureForm','measure'],['#cancelWorkout','#workoutForm','workout']].forEach(([b,f,t])=>$(b).onclick=()=>{window['edit'+t[0].toUpperCase()+t.slice(1)]=null;resetForm($(f),$(b))});
+document.addEventListener('click',e=>{const ed=e.target.dataset.edit,del=e.target.dataset.delete;if(ed){const [t,id]=ed.split(':');const item=db[t==='weight'?'weights':t==='measure'?'measurements':'workouts'].find(x=>x.id===id),form=$('#'+(t==='weight'?'weight':t==='measure'?'measure':'workout')+'Form');Object.keys(item).forEach(k=>{if(form.elements[k])form.elements[k].value=item[k]});window['edit'+t[0].toUpperCase()+t.slice(1)]=id;$('#cancel'+t[0].toUpperCase()+t.slice(1)).hidden=false;form.scrollIntoView({behavior:'smooth',block:'center'})}if(del){const [t,id]=del.split(':');if(!confirm('Delete this record?'))return;const key=t==='weight'?'weights':t==='measure'?'measurements':'workouts';db[key]=db[key].filter(x=>x.id!==id);save()}});
+$$('#nav button').forEach(b=>b.onclick=()=>{$$('#nav button').forEach(x=>x.classList.toggle('active',x===b));$$('.page').forEach(p=>p.classList.toggle('active',p.id===b.dataset.page));});
+$('#weightRange').onchange=renderOverview;$('#exerciseFilter').onchange=renderWorkouts;$('#reviewMonth').onchange=renderReview;
+function download(name,content,type){const a=document.createElement('a'),url=URL.createObjectURL(new Blob([content],{type}));a.href=url;a.download=name;a.click();URL.revokeObjectURL(url)}
+function csv(rows,keys){const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';return [keys.join(','),...rows.map(r=>keys.map(k=>q(r[k])).join(','))].join('\n')}
+$('#exportJson').onclick=()=>download('progress-ledger-backup.json',JSON.stringify(db,null,2),'application/json');
+$('#exportWeight').onclick=()=>download('weight.csv',csv(db.weights,['date','weight','notes']),'text/csv');
+$('#exportMeasures').onclick=()=>download('body-measurements.csv',csv(db.measurements,['date',...mf.map(x=>x[0]),'notes']),'text/csv');
+$('#exportWorkouts').onclick=()=>download('workouts.csv',csv(db.workouts,['date','exercise','weight','sets','reps','notes']),'text/csv');
+$('#importJson').onclick=()=>{const f=$('#importFile').files[0];if(!f){alert('Choose a JSON backup first.');return}const r=new FileReader();r.onload=()=>{try{const x=JSON.parse(r.result);if(!Array.isArray(x.weights)||!Array.isArray(x.measurements)||!Array.isArray(x.workouts))throw Error();if(!confirm('Importing will replace all current records. Continue?'))return;db=x;save();alert('Backup restored.')}catch(e){alert('This does not look like a valid Progress Ledger backup.')}};r.readAsText(f)};
+$('#clearData').onclick=()=>{if(confirm('Delete ALL weight, measurement and workout records from this browser? This cannot be undone.')){db=empty();save()}};
+setDefaultDates();renderAll();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
+}
+</script>
+</body>
+</html>
